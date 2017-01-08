@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{{post.render() | safe}}
+
+<div class="panel-footer flex-sb">
+
+  <div>
+    {% if user %}
+    <a href="/comment/new/{{post.key().id()}}" class="btn btn-default">Add Comment</a>
+    {% endif %}
+  </div>
+
+  <div class="btn-group" role="group">
+    {% if user %}
+      {% if user.key().id() == post.user.key().id() %}
+        <a class="btn btn-info" href="/blog/edit/{{post.key().id()}}">Edit</a>
+        <a class="btn btn-danger" href="/blog/delete/{{post.key().id()}}">Delete</a>
+      {% else %}
+        {% if user.key() in post.likes %}
+          <button type="button" id="like-button" class="btn btn-success active" data-key="{{post.key().id()}}">
+        {% else %}
+          <button type="button" id="like-button" class="btn btn-success" data-key="{{post.key().id()}}">
+        {% endif %}
+          <span class="glyphicon glyphicon-thumbs-up"></span>
+          </button>
+        {% if user.key() in post.dislikes %}
+          <button type="button" id="dislike-button" class="btn btn-danger active" data-key="{{post.key().id()}}">
+        {% else %}
+          <button type="button" id="dislike-button" class="btn btn-danger" data-key="{{post.key().id()}}">
+        {% endif %}
+          <span class="glyphicon glyphicon-thumbs-up"></span>
+          </button>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="counts">
+    <span id="likes">{{post.get_likes()}} likes</span> |
+    <span id="dislikes">{{post.get_dislikes()}} disikes</span>
+  </div>
+</div>
+
+</div> <!-- this ends the .panel div that was created in post.render() -->
+
+{% for comment in comments %}
+
+  <blockquote>
+    <p>{{comment.render() | safe}}</p>
+    <footer>{{comment.user.name}}</footer>
+    {% if user %}
+      {% if user.key().id() == comment.user.key().id() %}
+      <p class="text-right">
+        <a href="/comment/edit/{{comment.key().id()}}">Edit</a>
+         |
+        <a href="/comment/delete/{{comment.key().id()}}">Delete</a>
+      </p>
+      {% endif %}
+    {% endif %}
+  </blockquote>
+
+{% endfor %}
+
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Are You Sure You Want to Delete This?</h1>
+
+<form method="POST" role="form">
+    <button type="submit" class="btn btn-danger">Yes, I'm sure!</button>
+    <button class="btn btn-default" onclick="goBack()">No, I shouldn't be here!</button>
+</form>
+
+{% endblock %}

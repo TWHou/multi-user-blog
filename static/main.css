@@ -1,0 +1,40 @@
+.flex-sb {
+  display: -webkit-flex;
+  display: -moz-flex;
+  display: -ms-flex;
+  display: -o-flex;
+  display: flex;
+  justify-content: space-between;
+  -ms-align-items: center;
+  align-items: center;
+}
+
+.navbar {
+  -ms-align-items: center;
+  align-items: center;
+}
+
+.navbar-brand {
+  flex-grow: 1;
+}
+
+.login {
+  padding-right: 15px;
+}
+
+blockquote {
+  font-size: 14px;
+}
+
+.error {
+  min-height: 25px;
+  border-radius: 5px;
+  display: -webkit-flex;
+  display: -moz-flex;
+  display: -ms-flex;
+  display: -o-flex;
+  display: flex;
+  -ms-align-items: center;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,8 @@
+<div class="panel panel-default">
+    <div class="panel-heading flex-sb">
+        <h3 class="panel-title"><a href="/blog/{{post.key().id()}}">{{post.subject}}</a> <small>{{post.user.name}}</small></h3>
+        <span>{{post.created.strftime('%b %d, %Y')}}</span>
+    </div>
+    <div class="panel-body">
+        {{post._render_text | safe}}
+    </div>

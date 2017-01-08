@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Blog</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="/static/main.css">
+</head>
+<body>
+
+<nav class="navbar navbar-default flex-sb">
+  <a class="navbar-brand" href="/blog">Multi User Blog</a>
+  <div class="login">
+    {% if user %}
+      {{user.name}} <a class="btn btn-default" href="/logout" role="button">Logout</a>
+    {% else %}
+      <a class="btn btn-default" href="/login" role="button">Login</a>
+      <a class="btn btn-default" href="/signup" role="button">Sign Up</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="container-fluid">
+
+{% block content %}
+{% endblock %}
+
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+
+<script type="text/javascript">
+  $('#like-button').on('click', function(e){
+    e.preventDefault();
+    var key = $(this).data('key');
+    $.ajax({
+      type: "post",
+      url: "/blog/like",
+      dataType: 'json',
+      data: {"postID": key},
+      success: function(data){
+        $('#dislike-button').removeClass('active');
+        $('#like-button').toggleClass('active');
+        $('#likes').html(data['like_count']+' likes');
+        $('#dislikes').html(data['dislike_count']+' dislikes');
+        },
+      error: function(err){
+          console.log(err);
+       }
+    });
+  });
+  $('#dislike-button').on('click', function(e){
+    e.preventDefault();
+    var key = $(this).data('key');
+    $.ajax({
+      type: "post",
+      url: "/blog/dislike",
+      dataType: 'json',
+      data: {"postID": key},
+      success: function(data){
+        $('#like-button').removeClass('active');
+        $('#dislike-button').toggleClass('active');
+        $('#likes').html(data['like_count']+' likes');
+        $('#dislikes').html(data['dislike_count']+' dislikes');
+        },
+      error: function(err){
+          console.log(err);
+       }
+    });
+  });
+  function goBack() {
+      window.history.back();
+  }
+</script>
+
+</body>
+</html>
