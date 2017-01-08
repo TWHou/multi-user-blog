@@ -4,12 +4,11 @@ import webapp2
 import re
 import hmac
 import json
-import logging
 
 from models import User
 from models import Post
 from models import Comment
-
+from functools import wraps
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'templates')
 JINJA_ENV = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATE_DIR),
@@ -75,6 +74,16 @@ class Handler(webapp2.RequestHandler):
     def logout(self):
         """Destroy user_id cookie"""
         self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
+
+    @staticmethod
+    def user_logged_in(func):
+        @wraps(func)
+        def wrapper(self, *a):
+            if self.user:
+                return func(self, *a)
+            else:
+                self.redirect('/login')
+        return wrapper
 
     def initialize(self, *a, **kw):
         webapp2.RequestHandler.initialize(self, *a, **kw)
@@ -170,28 +179,22 @@ class BlogHandler(Handler):
 class NewPost(Handler):
     """Handle new blog post creation"""
 
+    @Handler.user_logged_in
     def get(self):
-        if self.user:
-            self.render("post-form.html")
-        else:
-            error = "you must log in before posting"
-            self.render("error.html", error=error)
+        self.render("post-form.html")
 
+    @Handler.user_logged_in
     def post(self):
-        if self.user:
-            subject = self.request.get("subject")
-            content = self.request.get("content")
-            if subject and content:
-                p = Post(user=self.user, subject=subject, content=content)
-                p.put()
-                self.redirect("/blog/%s" % str(p.key().id()))
-            else:
-                error = "we need both a subject and some content!"
-                self.render("post-form.html", subject=subject,
-                            content=content, error=error)
+        subject = self.request.get("subject")
+        content = self.request.get("content")
+        if subject and content:
+            p = Post(user=self.user, subject=subject, content=content)
+            p.put()
+            self.redirect("/blog/%s" % str(p.key().id()))
         else:
-            error = "you must log in before posting"
-            self.render("error.html", error=error)
+            error = "we need both a subject and some content!"
+            self.render("post-form.html", subject=subject,
+                        content=content, error=error)
 
 
 class PostHandler(Handler):
@@ -209,207 +212,178 @@ class PostHandler(Handler):
 class LikePost(Handler):
     """Toggles whether user is in the likes list"""
 
+    @Handler.user_logged_in
     def post(self):
-        if self.user:
-            post_id = self.request.get('postID')
-            post = Post.get_by_id(int(post_id))
-            if self.user.key().id() != post.user.key().id():
-                if self.user.key() in post.dislikes:
-                    post.dislikes.remove(self.user.key())
-                if self.user.key() not in post.likes:
-                    post.likes.append(self.user.key())
-                else:
-                    post.likes.remove(self.user.key())
-                post.put()
-                likes = post.get_likes()
-                dislikes = post.get_dislikes()
-                self.write(json.dumps(
-                    ({'like_count': likes, 'dislike_count': dislikes})))
+        post_id = self.request.get('postID')
+        post = Post.get_by_id(int(post_id))
+        if self.user.key().id() != post.user.key().id():
+            if self.user.key() in post.dislikes:
+                post.dislikes.remove(self.user.key())
+            if self.user.key() not in post.likes:
+                post.likes.append(self.user.key())
+            else:
+                post.likes.remove(self.user.key())
+            post.put()
+            likes = post.get_likes()
+            dislikes = post.get_dislikes()
+            self.write(json.dumps(
+                ({'like_count': likes, 'dislike_count': dislikes})))
 
 
 class DislikePost(Handler):
     """Toggles whether user is in the dislikes list"""
 
+    @Handler.user_logged_in
     def post(self):
-        if self.user:
-            post_id = self.request.get('postID')
-            post = Post.get_by_id(int(post_id))
-            if self.user.key().id() != post.user.key().id():
-                if self.user.key() in post.likes:
-                    post.likes.remove(self.user.key())
-                if self.user.key() not in post.dislikes:
-                    post.dislikes.append(self.user.key())
-                else:
-                    post.dislikes.remove(self.user.key())
-                post.put()
-                likes = post.get_likes()
-                dislikes = post.get_dislikes()
-                self.write(json.dumps(
-                    ({'like_count': likes, 'dislike_count': dislikes})))
+        post_id = self.request.get('postID')
+        post = Post.get_by_id(int(post_id))
+        if self.user.key().id() != post.user.key().id():
+            if self.user.key() in post.likes:
+                post.likes.remove(self.user.key())
+            if self.user.key() not in post.dislikes:
+                post.dislikes.append(self.user.key())
+            else:
+                post.dislikes.remove(self.user.key())
+            post.put()
+            likes = post.get_likes()
+            dislikes = post.get_dislikes()
+            self.write(json.dumps(
+                ({'like_count': likes, 'dislike_count': dislikes})))
 
 
 class EditPost(Handler):
     """Handles blog post edits"""
 
+    @Handler.user_logged_in
     def get(self, post_id):
-        if self.user:
-            post = Post.get_by_id(int(post_id))
-            if self.user.key().id() == post.user.key().id():
-                self.render("post-form.html", subject=post.subject,
-                            content=post.content)
-            else:
-                error = "You can only edit your own post"
-                self.redirect("/blog/%s" % post_id, error=error)
+        post = Post.get_by_id(int(post_id))
+        if self.user.key().id() == post.user.key().id():
+            self.render("post-form.html", subject=post.subject,
+                        content=post.content)
         else:
-            error = "you must log in before editing"
-            self.render("error.html", error=error)
+            error = "You can only edit your own post"
+            self.redirect("/blog/%s" % post_id, error=error)
 
+    @Handler.user_logged_in
     def post(self, post_id):
-        if self.user:
+        post = Post.get_by_id(int(post_id))
+        if self.user.key().id() == post.user.key().id():
+            subject = self.request.get("subject")
+            content = self.request.get("content")
             post = Post.get_by_id(int(post_id))
-            if self.user.key().id() == post.user.key().id():
-                subject = self.request.get("subject")
-                content = self.request.get("content")
-                post = Post.get_by_id(int(post_id))
-                if subject and content:
-                    post.content = content
-                    post.subject = subject
-                    post.put()
-                    self.redirect("/blog/%s" % post_id)
-                else:
-                    error = "we need both a subject and some content!"
-                    self.render("post-form.html", subject=subject,
-                                content=content, error=error)
+            if subject and content:
+                post.content = content
+                post.subject = subject
+                post.put()
+                self.redirect("/blog/%s" % post_id)
             else:
-                error = "You can only edit your own post"
-                self.redirect("/blog/%s" % post_id, error=error)
+                error = "we need both a subject and some content!"
+                self.render("post-form.html", subject=subject,
+                            content=content, error=error)
         else:
-            error = "you must log in before editing"
-            self.render("error.html", error=error)
+            error = "You can only edit your own post"
+            self.redirect("/blog/%s" % post_id, error=error)
 
 
 class DeletePost(Handler):
     """Handles deletion of blog post"""
 
+    @Handler.user_logged_in
     def get(self, post_id):
-        if self.user:
-            post = Post.get_by_id(int(post_id))
-            if self.user.key().id() == post.user.key().id():
-                self.render("delete.html")
-            else:
-                error = "You cannot delete other user's post"
-                self.redirect("/blog/%s" % post_id, error=error)
+        post = Post.get_by_id(int(post_id))
+        if self.user.key().id() == post.user.key().id():
+            self.render("delete.html")
         else:
-            error = "you must log in before deleting"
-            self.render("error.html", error=error)
+            error = "You cannot delete other user's post"
+            self.redirect("/blog/%s" % post_id, error=error)
 
+
+    @Handler.user_logged_in
     def post(self, post_id):
-        if self.user:
-            post = Post.get_by_id(int(post_id))
-            if self.user.key().id() == post.user.key().id():
-                post.delete()
-                self.redirect("/blog")
-            else:
-                error = "You cannot delete other user's post"
-                self.redirect("/blog/%s" % post_id, error)
+        post = Post.get_by_id(int(post_id))
+        if self.user.key().id() == post.user.key().id():
+            post.delete()
+            self.redirect("/blog")
         else:
-            error = "you must log in before deleting"
-            self.render("error.html", error=error)
+            error = "You cannot delete other user's post"
+            self.redirect("/blog/%s" % post_id, error)
 
 
 class NewComment(Handler):
     """Handles creation of new comment"""
 
+    @Handler.user_logged_in
     def get(self, post_id):
-        if self.user:
-            self.render("comment-form.html")
-        else:
-            error = "you must log in before leaving a comment"
-            self.render("error.html", error=error)
+        self.render("comment-form.html")
 
+    @Handler.user_logged_in
     def post(self, post_id):
-        if self.user:
-            content = self.request.get("content")
-            if content:
-                post = Post.get_by_id(int(post_id))
-                comment = Comment(user=self.user, content=content, post=post)
-                comment.put()
-                self.redirect("/blog/%s" % post_id)
-            else:
-                error = "You didn't leave any comment."
-                self.render("comment-form.html", error=error)
+        content = self.request.get("content")
+        if content:
+            post = Post.get_by_id(int(post_id))
+            comment = Comment(user=self.user, content=content, post=post)
+            comment.put()
+            self.redirect("/blog/%s" % post_id)
         else:
-            error = "you must log in before leaving a comment"
-            self.render("error.html", error=error)
+            error = "You didn't leave any comment."
+            self.render("comment-form.html", error=error)
 
 
 class EditComment(Handler):
     """Handles editing of comments"""
 
+    @Handler.user_logged_in
     def get(self, comment_id):
-        if self.user:
-            comment = Comment.get_by_id(int(comment_id))
-            if self.user.key().id() == comment.user.key().id():
-                self.render("comment-form.html", content=comment.content)
-            else:
-                error = "you can only edit your own comment"
-                self.redirect("/blog/%s" %
-                              comment.post.key().id(), error=error)
+        comment = Comment.get_by_id(int(comment_id))
+        if self.user.key().id() == comment.user.key().id():
+            self.render("comment-form.html", content=comment.content)
         else:
-            error = "you must log in before editing"
-            self.render("error.html", error=error)
+            error = "you can only edit your own comment"
+            self.redirect("/blog/%s" %
+                          comment.post.key().id(), error=error)
 
+    @Handler.user_logged_in
     def post(self, comment_id):
-        if self.user:
-            comment = Comment.get_by_id(int(comment_id))
-            if self.user.key().id() == comment.user.key().id():
-                content = self.request.get("content")
-                if content:
-                    comment.content = content
-                    comment.put()
-                    self.redirect("/blog/%s" % comment.post.key().id())
-                else:
-                    error = "Uhmmm, did you forget to put some content back?"
-                    self.render("comment-form.html", error=error)
+        comment = Comment.get_by_id(int(comment_id))
+        if self.user.key().id() == comment.user.key().id():
+            content = self.request.get("content")
+            if content:
+                comment.content = content
+                comment.put()
+                self.redirect("/blog/%s" % comment.post.key().id())
             else:
-                error = "you can only edit your own comment"
-                self.redirect("/blog/%s" %
-                              comment.post.key().id(), error=error)
+                error = "Uhmmm, did you forget to put some content back?"
+                self.render("comment-form.html", error=error)
         else:
-            error = "you must log in before editing"
-            self.render("error.html", error=error)
+            error = "you can only edit your own comment"
+            self.redirect("/blog/%s" %
+                          comment.post.key().id(), error=error)
 
 
 class DeleteComment(Handler):
     """Handles deletion of comments"""
 
+    @Handler.user_logged_in
     def get(self, comment_id):
-        if self.user:
-            comment = Comment.get_by_id(int(comment_id))
-            if self.user.key().id() == comment.user.key().id():
-                self.render("delete.html")
-            else:
-                error = "You can only delete your own comment"
-                self.redirect("/blog/%s" %
-                              comment.post.key().id(), error=error)
+        comment = Comment.get_by_id(int(comment_id))
+        if self.user.key().id() == comment.user.key().id():
+            self.render("delete.html")
         else:
-            error = "you must log in before deleting"
-            self.render("error.html", error=error)
+            error = "You can only delete your own comment"
+            self.redirect("/blog/%s" %
+                          comment.post.key().id(), error=error)
 
+    @Handler.user_logged_in
     def post(self, comment_id):
-        if self.user:
-            comment = Comment.get_by_id(int(comment_id))
-            if self.user.key().id() == comment.user.key().id():
-                post_id = comment.post.key().id()
-                comment.delete()
-                self.redirect("/blog/%s" % post_id)
-            else:
-                error = "You can only delete your own comment"
-                self.redirect("/blog/%s" %
-                              comment.post.key().id(), error=error)
+        comment = Comment.get_by_id(int(comment_id))
+        if self.user.key().id() == comment.user.key().id():
+            post_id = comment.post.key().id()
+            comment.delete()
+            self.redirect("/blog/%s" % post_id)
         else:
-            error = "you must log in before deleting"
-            self.render("error.html", error=error)
+            error = "You can only delete your own comment"
+            self.redirect("/blog/%s" %
+                          comment.post.key().id(), error=error)
 
 app = webapp2.WSGIApplication([
     ('/', MainPage),
