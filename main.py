@@ -6,11 +6,9 @@ import hmac
 import json
 import logging
 
-import models
-
-User = models.User
-Post = models.Post
-Comment = models.Comment
+from models import User
+from models import Post
+from models import Comment
 
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'templates')
