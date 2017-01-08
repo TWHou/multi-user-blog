@@ -21,6 +21,12 @@
 
 <div class="container-fluid">
 
+{% if error %}
+  <div class="bg-danger text-capitalize text-center error">
+   {{error}}
+  </div>
+{% endif %}
+
 {% block content %}
 {% endblock %}
 

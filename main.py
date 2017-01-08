@@ -75,6 +75,11 @@ class Handler(webapp2.RequestHandler):
         """Destroy user_id cookie"""
         self.response.headers.add_header('Set-Cookie', 'user_id=; Path=/')
 
+    def initialize(self, *a, **kw):
+        webapp2.RequestHandler.initialize(self, *a, **kw)
+        uid = self.read_cookie('user_id')
+        self.user = uid and User.by_id(int(uid))
+
     @staticmethod
     def user_logged_in(func):
         @wraps(func)
@@ -85,10 +90,19 @@ class Handler(webapp2.RequestHandler):
                 self.redirect('/login')
         return wrapper
 
-    def initialize(self, *a, **kw):
-        webapp2.RequestHandler.initialize(self, *a, **kw)
-        uid = self.read_cookie('user_id')
-        self.user = uid and User.by_id(int(uid))
+    @staticmethod
+    def post_exist(func):
+        @wraps(func)
+        def wrapper(self, post_id=""):
+            if not post_id:
+                post_id = self.request.get('postID')
+            post = Post.get_by_id(int(post_id))
+            if post:
+                return func(self, post_id)
+            else:
+                self.error(404)
+                return
+        return wrapper
 
 
 class MainPage(Handler):
@@ -212,9 +226,9 @@ class PostHandler(Handler):
 class LikePost(Handler):
     """Toggles whether user is in the likes list"""
 
+    @Handler.post_exist
     @Handler.user_logged_in
     def post(self):
-        post_id = self.request.get('postID')
         post = Post.get_by_id(int(post_id))
         if self.user.key().id() != post.user.key().id():
             if self.user.key() in post.dislikes:
@@ -233,9 +247,9 @@ class LikePost(Handler):
 class DislikePost(Handler):
     """Toggles whether user is in the dislikes list"""
 
+    @Handler.post_exist
     @Handler.user_logged_in
     def post(self):
-        post_id = self.request.get('postID')
         post = Post.get_by_id(int(post_id))
         if self.user.key().id() != post.user.key().id():
             if self.user.key() in post.likes:
@@ -254,6 +268,7 @@ class DislikePost(Handler):
 class EditPost(Handler):
     """Handles blog post edits"""
 
+    @Handler.post_exist
     @Handler.user_logged_in
     def get(self, post_id):
         post = Post.get_by_id(int(post_id))
@@ -264,6 +279,7 @@ class EditPost(Handler):
             error = "You can only edit your own post"
             self.redirect("/blog/%s" % post_id, error=error)
 
+    @Handler.post_exist
     @Handler.user_logged_in
     def post(self, post_id):
         post = Post.get_by_id(int(post_id))
@@ -288,6 +304,7 @@ class EditPost(Handler):
 class DeletePost(Handler):
     """Handles deletion of blog post"""
 
+    @Handler.post_exist
     @Handler.user_logged_in
     def get(self, post_id):
         post = Post.get_by_id(int(post_id))
@@ -297,7 +314,7 @@ class DeletePost(Handler):
             error = "You cannot delete other user's post"
             self.redirect("/blog/%s" % post_id, error=error)
 
-
+    @Handler.post_exist
     @Handler.user_logged_in
     def post(self, post_id):
         post = Post.get_by_id(int(post_id))
@@ -312,10 +329,12 @@ class DeletePost(Handler):
 class NewComment(Handler):
     """Handles creation of new comment"""
 
+    @Handler.post_exist
     @Handler.user_logged_in
     def get(self, post_id):
         self.render("comment-form.html")
 
+    @Handler.post_exist
     @Handler.user_logged_in
     def post(self, post_id):
         content = self.request.get("content")
