@@ -7,12 +7,12 @@
 </div>
 <form method="POST" role="form">
 
-    <div class="form-group">
-        <label for="content">Content:</label>
-        <textarea name="content" id="content" class="form-control" rows="20">{{content}}</textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Submit</button>
+  <div class="form-group">
+    <label for="content">Content:</label>
+    <textarea name="content" id="content" class="form-control" rows="20">{{content}}</textarea>
+  </div>
+  <button class="btn btn-default" onclick="goBack()">Cancel</button>
+  <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 
 {% endblock %}

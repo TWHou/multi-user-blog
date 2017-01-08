@@ -326,16 +326,18 @@ class LikePost(Handler):
         if self.user:
             post_id = self.request.get('postID')
             post = Post.get_by_id(int(post_id))
-            if self.user.key() in post.dislikes:
-                post.dislikes.remove(self.user.key())
-            if self.user.key() not in post.likes:
-                post.likes.append(self.user.key())
-            else:
-                post.likes.remove(self.user.key())
-            post.put()
-            likes = post.get_likes()
-            dislikes = post.get_dislikes()
-            self.write(json.dumps(({'like_count': likes, 'dislike_count': dislikes})))
+            if self.user.key().id() != post.user.key().id():
+                if self.user.key() in post.dislikes:
+                    post.dislikes.remove(self.user.key())
+                if self.user.key() not in post.likes:
+                    post.likes.append(self.user.key())
+                else:
+                    post.likes.remove(self.user.key())
+                post.put()
+                likes = post.get_likes()
+                dislikes = post.get_dislikes()
+                self.write(json.dumps(
+                    ({'like_count': likes, 'dislike_count': dislikes})))
 
 
 class DislikePost(Handler):
@@ -345,16 +347,18 @@ class DislikePost(Handler):
         if self.user:
             post_id = self.request.get('postID')
             post = Post.get_by_id(int(post_id))
-            if self.user.key() in post.likes:
-                post.likes.remove(self.user.key())
-            if self.user.key() not in post.dislikes:
-                post.dislikes.append(self.user.key())
-            else:
-                post.dislikes.remove(self.user.key())
-            post.put()
-            likes = post.get_likes()
-            dislikes = post.get_dislikes()
-            self.write(json.dumps(({'like_count': likes, 'dislike_count': dislikes})))
+            if self.user.key().id() != post.user.key().id():
+                if self.user.key() in post.likes:
+                    post.likes.remove(self.user.key())
+                if self.user.key() not in post.dislikes:
+                    post.dislikes.append(self.user.key())
+                else:
+                    post.dislikes.remove(self.user.key())
+                post.put()
+                likes = post.get_likes()
+                dislikes = post.get_dislikes()
+                self.write(json.dumps(
+                    ({'like_count': likes, 'dislike_count': dislikes})))
 
 
 class EditPost(Handler):
@@ -462,7 +466,8 @@ class EditComment(Handler):
                 self.render("comment-form.html", content=comment.content)
             else:
                 error = "you can only edit your own comment"
-                self.redirect("/blog/%s" % comment.post.key().id(), error=error)
+                self.redirect("/blog/%s" %
+                              comment.post.key().id(), error=error)
         else:
             error = "you must log in before editing"
             self.render("error.html", error=error)
@@ -481,7 +486,8 @@ class EditComment(Handler):
                     self.render("comment-form.html", error=error)
             else:
                 error = "you can only edit your own comment"
-                self.redirect("/blog/%s" % comment.post.key().id(), error=error)
+                self.redirect("/blog/%s" %
+                              comment.post.key().id(), error=error)
         else:
             error = "you must log in before editing"
             self.render("error.html", error=error)
@@ -497,7 +503,8 @@ class DeleteComment(Handler):
                 self.render("delete.html")
             else:
                 error = "You can only delete your own comment"
-                self.redirect("/blog/%s" % comment.post.key().id(), error=error)
+                self.redirect("/blog/%s" %
+                              comment.post.key().id(), error=error)
         else:
             error = "you must log in before deleting"
             self.render("error.html", error=error)
@@ -511,7 +518,8 @@ class DeleteComment(Handler):
                 self.redirect("/blog/%s" % post_id)
             else:
                 error = "You can only delete your own comment"
-                self.redirect("/blog/%s" % comment.post.key().id(), error=error)
+                self.redirect("/blog/%s" %
+                              comment.post.key().id(), error=error)
         else:
             error = "you must log in before deleting"
             self.render("error.html", error=error)
