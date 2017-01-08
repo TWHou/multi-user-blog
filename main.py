@@ -4,6 +4,7 @@ import webapp2
 import re
 import hmac
 import json
+import logging
 
 from models import User
 from models import Post
@@ -103,6 +104,20 @@ class Handler(webapp2.RequestHandler):
                 self.error(404)
                 return
         return wrapper
+
+    @staticmethod
+    def comment_exist(func):
+        @wraps(func)
+        def wrapper(self, comment_id):
+            logging.info("checking comment")
+            comment = Comment.get_by_id(int(comment_id))
+            if comment:
+                return func(self, comment_id)
+            else:
+                self.error(404)
+                return
+        return wrapper
+
 
 
 class MainPage(Handler):
@@ -351,6 +366,7 @@ class NewComment(Handler):
 class EditComment(Handler):
     """Handles editing of comments"""
 
+    @Handler.comment_exist
     @Handler.user_logged_in
     def get(self, comment_id):
         comment = Comment.get_by_id(int(comment_id))
@@ -361,6 +377,7 @@ class EditComment(Handler):
             self.redirect("/blog/%s" %
                           comment.post.key().id(), error=error)
 
+    @Handler.comment_exist
     @Handler.user_logged_in
     def post(self, comment_id):
         comment = Comment.get_by_id(int(comment_id))
@@ -382,6 +399,7 @@ class EditComment(Handler):
 class DeleteComment(Handler):
     """Handles deletion of comments"""
 
+    @Handler.comment_exist
     @Handler.user_logged_in
     def get(self, comment_id):
         comment = Comment.get_by_id(int(comment_id))
@@ -392,6 +410,7 @@ class DeleteComment(Handler):
             self.redirect("/blog/%s" %
                           comment.post.key().id(), error=error)
 
+    @Handler.comment_exist
     @Handler.user_logged_in
     def post(self, comment_id):
         comment = Comment.get_by_id(int(comment_id))
