@@ -107,7 +107,9 @@ class Handler(webapp2.RequestHandler):
     def user_owns_post(boolean, error):
         def decorator(func):
             @wraps(func)
-            def wrapper(self, post_id):
+            def wrapper(self, post_id=""):
+                if not post_id:
+                    post_id = self.request.get('postID')
                 post = Post.get_by_id(int(post_id))
                 same_user = self.user.key().id() == post.user.key().id()
                 allowed = same_user == boolean
@@ -120,6 +122,18 @@ class Handler(webapp2.RequestHandler):
             return wrapper
         return decorator
 
-
-
+    @staticmethod
+    def user_owns_comment(error):
+        def decorator(func):
+            @wraps(func)
+            def wrapper(self, comment_id):
+                comment = Comment.get_by_id(int(comment_id))
+                if self.user.key().id() == comment.user.key().id():
+                    return func(self, comment_id)
+                else:
+                    expire = datetime.now()+timedelta(seconds=5)
+                    self.response.set_cookie('error', error, expires=expire, path="/")
+                    self.redirect("/blog/%s" % comment.post.key().id())
+            return wrapper
+        return decorator
 

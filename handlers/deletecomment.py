@@ -4,26 +4,18 @@ from handler import Handler
 class DeleteComment(Handler):
     """Handles deletion of comments"""
 
+    @Handler.user_owns_comment("You can only delete your own comment")
     @Handler.comment_exist
     @Handler.user_logged_in
     def get(self, comment_id):
         comment = Comment.get_by_id(int(comment_id))
-        if self.user.key().id() == comment.user.key().id():
-            self.render("delete.html")
-        else:
-            error = "You can only delete your own comment"
-            self.redirect("/blog/%s" %
-                          comment.post.key().id(), error=error)
+        self.render("delete.html")
 
+    @Handler.user_owns_comment("You can only delete your own comment")
     @Handler.comment_exist
     @Handler.user_logged_in
     def post(self, comment_id):
         comment = Comment.get_by_id(int(comment_id))
-        if self.user.key().id() == comment.user.key().id():
-            post_id = comment.post.key().id()
-            comment.delete()
-            self.redirect("/blog/%s" % post_id)
-        else:
-            error = "You can only delete your own comment"
-            self.redirect("/blog/%s" %
-                          comment.post.key().id(), error=error)
+        post_id = comment.post.key().id()
+        comment.delete()
+        self.redirect("/blog/%s" % post_id)
