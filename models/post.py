@@ -1,5 +1,4 @@
 import jinja2
-import os
 
 from os.path import join, dirname, abspath
 from user import User
